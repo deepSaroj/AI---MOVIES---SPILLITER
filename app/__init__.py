@@ -60,6 +60,6 @@ def create_app(config_object=None):
         from flask import render_template
         return render_template("errors/500.html"), 500
 
-    with app.app_context():
-        db.create_all()  # dev convenience; production uses Flask-Migrate (see README)
+   # with app.app_context():
+ #       db.create_all()  # dev convenience; production uses Flask-Migrate (see README)
     return app
