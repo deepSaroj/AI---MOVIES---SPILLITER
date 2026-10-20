@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Profile · AI Movie Splitter{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:560px">
+  <div class="glass-card p-4 mb-3">
+    <h1 class="h4 fw-bold">Profile &amp; settings</h1>
+    <p class="mb-1"><strong>Username:</strong> {{ current_user.username }}</p>
+    <p class="mb-1"><strong>Email:</strong> {{ current_user.email }}</p>
+    <p class="mb-0"><strong>Member since:</strong> {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else '' }}</p>
+  </div>
+  <div class="glass-card p-4">
+    <h2 class="h5 fw-bold mb-3">Change password</h2>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">{{ form.current_password.label(class="form-label") }}{{ form.current_password(class="form-control") }}</div>
+      <div class="mb-3">{{ form.new_password.label(class="form-label") }}{{ form.new_password(class="form-control") }}
+      {% for e in form.new_password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="mb-3">{{ form.confirm.label(class="form-label") }}{{ form.confirm(class="form-control") }}
+      {% for e in form.confirm.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      {{ form.submit(class="btn btn-gradient rounded-pill") }}
+    </form>
+  </div>
+</div>
+{% endblock %}

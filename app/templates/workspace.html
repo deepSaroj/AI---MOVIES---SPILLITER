@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Workspace · AI Movie Splitter{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:860px">
+  <h1 class="h3 fw-bold mb-3">Video splitting workspace</h1>
+  <div class="glass-card p-4 mb-4">
+    <h2 class="h5 fw-bold"><i class="bi bi-cloud-upload"></i> Upload a video</h2>
+    <p class="small">MP4, MOV, MKV, AVI, WebM. Files are verified on the server with FFprobe — the name or type your browser claims is never trusted.</p>
+    <form id="uploadForm" method="post" enctype="multipart/form-data" action="{{ url_for('videos.upload') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drop a video file here or press Enter to browse">
+        <i class="bi bi-file-earmark-play fs-1 gradient-text"></i>
+        <div class="fw-semibold mt-2">Drag &amp; drop your video here</div>
+        <div class="small">or</div>
+        <span class="btn btn-gradient rounded-pill mt-1">Browse Files</span>
+        <input id="videoInput" class="d-none" type="file" name="video" accept=".mp4,.mov,.mkv,.avi,.webm,.m4v,video/*">
+      </div>
+      <div id="uploadProgressWrap" class="d-none mt-3">
+        <div class="small mb-1">Uploading… keep this tab open.</div>
+        <div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div></div>
+      </div>
+    </form>
+  </div>
+  <div class="glass-card p-4">
+    <h2 class="h5 fw-bold"><i class="bi bi-link-45deg"></i> Paste a video link</h2>
+    <p class="small">Only <strong>direct, authorized video-file URLs</strong> can be fetched. Streaming/watch pages (YouTube, Netflix, etc.) are not downloadable sources — for those, upload the file you own instead. Links are SSRF-checked before anything is fetched.</p>
+    <form method="post" action="{{ url_for('videos.from_url') }}" class="d-flex gap-2 flex-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input class="form-control flex-grow-1" type="url" name="url" required placeholder="Paste an authorized video URL here…" aria-label="Authorized video URL">
+      <button class="btn btn-gradient rounded-pill px-4" type="submit">Fetch Video</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

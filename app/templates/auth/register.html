@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Register · AI Movie Splitter{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:460px">
+  <div class="glass-card p-4">
+    <h1 class="h4 fw-bold mb-3">Create your account</h1>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">{{ form.username.label(class="form-label") }}{{ form.username(class="form-control") }}
+      {% for e in form.username.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="mb-3">{{ form.email.label(class="form-label") }}{{ form.email(class="form-control", placeholder="you@example.com") }}
+      {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="mb-3">{{ form.password.label(class="form-label") }}{{ form.password(class="form-control") }}
+      {% for e in form.password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="mb-3">{{ form.confirm.label(class="form-label") }}{{ form.confirm(class="form-control") }}
+      {% for e in form.confirm.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      {{ form.submit(class="btn btn-gradient rounded-pill w-100") }}
+    </form>
+    <p class="small mt-3 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Log in</a></p>
+  </div>
+</div>
+{% endblock %}

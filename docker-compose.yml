@@ -1,0 +1,29 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      SECRET_KEY: change-me-in-real-deployments
+      DATABASE_URL: postgresql://splitter:splitter@db:5432/splitter
+      SESSION_COOKIE_SECURE: "0"
+    volumes:
+      - uploads:/app/uploads
+      - outputs:/app/outputs
+    depends_on:
+      - db
+      - redis
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: splitter
+      POSTGRES_PASSWORD: splitter
+      POSTGRES_DB: splitter
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+volumes:
+  uploads:
+  outputs:
+  pgdata:

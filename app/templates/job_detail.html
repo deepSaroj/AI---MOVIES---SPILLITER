@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title or job.original_filename }} · AI Movie Splitter{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:980px">
+  <a class="small" href="{{ url_for('main.dashboard') }}">← Back to dashboard</a>
+  <div class="glass-card p-4 mt-2">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <img class="img-fluid rounded" src="{{ url_for('videos.thumbnail', job_id=job.id) }}" alt="Video thumbnail" onerror="this.style.display='none'">
+      </div>
+      <div class="col-md-8">
+        <h1 class="h4 fw-bold">{{ job.title or job.original_filename }}</h1>
+        <div class="small d-flex flex-wrap gap-3">
+          <span><i class="bi bi-clock"></i> Duration: <strong id="origDuration">{{ fmt_ts(job.original_duration or 0) }}</strong></span>
+          <span>Audio: <strong>{{ 'Yes' if job.has_audio else 'No' if job.has_audio is not none else '—' }}</strong></span>
+          <span>Source: <strong>{{ job.source_type }}</strong></span>
+          <span>Status: <strong id="jobStatus" data-job-id="{{ job.id }}" data-status="{{ job.status }}"><span id="jobStatusLabel">{{ job.status }}</span></strong></span>
+        </div>
+        {% if job.status in ('queued','processing') %}
+        <div class="progress mt-3"><div id="jobProgressBar" class="progress-bar" style="width:{{ job.progress }}%">{{ job.progress }}%</div></div>
+        <form method="post" action="{{ url_for('videos.cancel', job_id=job.id) }}" class="mt-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-danger btn-sm rounded-pill">Cancel Processing</button>
+        </form>
+        {% endif %}
+        {% if job.status == 'failed' %}
+        <div class="alert alert-danger mt-3 mb-2">{{ job.error_message or 'Processing failed.' }}</div>
+        <form method="post" action="{{ url_for('videos.retry', job_id=job.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-gradient btn-sm rounded-pill">Retry processing</button>
+        </form>
+        {% endif %}
+        {% if job.status == 'cancelled' %}
+        <div class="alert alert-warning mt-3 mb-2">This job was cancelled.</div>
+        <form method="post" action="{{ url_for('videos.retry', job_id=job.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-gradient btn-sm rounded-pill">Restart processing</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if job.status in ('uploaded','completed','failed','cancelled') %}
+    <hr>
+    <form method="post" action="{{ url_for('videos.split', job_id=job.id) }}" class="row g-3 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3">
+        <label class="form-label" for="clipDuration">Clip duration</label>
+        <select class="form-select" id="clipDuration" name="clip_duration">
+          {% for s in presets %}<option value="{{ s }}" {% if job.selected_clip_duration==s %}selected{% endif %}>{{ s//60 }} minute{{ 's' if s!=60 }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="customDuration">Custom duration (optional)</label>
+        <div class="input-group">
+          <input class="form-control" id="customDuration" type="number" min="5" name="custom_duration" placeholder="e.g. 90">
+          <select class="form-select" name="custom_unit" style="max-width:110px"><option value="seconds">seconds</option><option value="minutes">minutes</option></select>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="outFmt">Output format</label>
+        <select class="form-select" id="outFmt" name="output_format"><option value="mp4">MP4</option><option value="webm">WebM</option></select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="prefix">File name prefix</label>
+        <input class="form-control" id="prefix" name="name_prefix" value="{{ job.name_prefix or 'clip' }}" maxlength="40">
+      </div>
+      <div class="col-md-2">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="reencode" name="reencode" value="1" {% if job.reencode %}checked{% endif %}>
+          <label class="form-check-label small" for="reencode">Re-encode (slower, exact cuts)</label>
+        </div>
+        <button class="btn btn-gradient rounded-pill w-100" type="submit"><i class="bi bi-scissors"></i> Split Video</button>
+      </div>
+      <div class="col-12 small" id="estimateBox">Estimated clips: <strong id="estClips">{{ estimated_clips or '—' }}</strong> <span class="text-light-emphasis">(stream copy is fast and lossless; re-encoding is slower but cuts exactly on keyframes)</span></div>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if job.clips %}
+  <div class="d-flex justify-content-between align-items-center mt-4 mb-2 flex-wrap gap-2">
+    <h2 class="h5 fw-bold mb-0">Generated clips ({{ job.clips|length }})</h2>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-light btn-sm rounded-pill" id="copyTs"><i class="bi bi-clipboard"></i> Copy timestamps</button>
+      <a class="btn btn-gradient btn-sm rounded-pill" href="{{ url_for('videos.download_all', job_id=job.id) }}"><i class="bi bi-file-earmark-zip"></i> Download All as ZIP</a>
+    </div>
+  </div>
+  <div class="row g-3" id="clipsGrid">
+    {% for clip in job.clips %}
+    <div class="col-md-6 col-lg-4">
+      <div class="glass-card clip-card h-100 p-3">
+        <video controls preload="metadata" src="{{ url_for('videos.stream_clip', clip_id=clip.id) }}"></video>
+        <div class="fw-bold mt-2">Clip {{ '%02d'|format(clip.clip_number) }}</div>
+        <div class="small">{{ fmt_ts(clip.start_time) }} – {{ fmt_ts(clip.end_time) }} · {{ '%.0f'|format(clip.duration) }}s · {{ '%.1f'|format(clip.file_size/1048576) if clip.file_size else '—' }} MB</div>
+        <div class="d-flex gap-2 mt-2">
+          <a class="btn btn-gradient btn-sm rounded-pill flex-grow-1" href="{{ url_for('videos.download_clip', clip_id=clip.id) }}"><i class="bi bi-download"></i> Download</a>
+          <form method="post" action="{{ url_for('videos.delete_clip', clip_id=clip.id) }}" onsubmit="return confirm('Delete this clip?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-danger btn-sm rounded-pill" aria-label="Delete clip"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <script>
+    document.getElementById('copyTs')?.addEventListener('click', async () => {
+      const lines = [{% for c in job.clips %}`Clip {{ '%02d'|format(c.clip_number) }}: {{ fmt_ts(c.start_time) }} - {{ fmt_ts(c.end_time) }}`,{% endfor %}];
+      await navigator.clipboard.writeText(lines.join('\n'));
+      showToast('Timestamps copied.', 'success');
+    });
+    (function(){
+      const sel=document.getElementById('clipDuration'), custom=document.getElementById('customDuration'), est=document.getElementById('estClips');
+      const total={{ job.original_duration or 0 }};
+      function upd(){ if(!est) return; const cd=parseInt(custom.value)||parseInt(sel.value); if(cd&&total) est.textContent=Math.ceil(total/cd); }
+      sel?.addEventListener('change',upd); custom?.addEventListener('input',upd);
+    })();
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

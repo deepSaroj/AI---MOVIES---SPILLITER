@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · AI Movie Splitter{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 fw-bold mb-0">Namaste, {{ current_user.username }} 👋</h1>
+    <a class="btn btn-gradient rounded-pill" href="{{ url_for('videos.workspace') }}"><i class="bi bi-plus-lg"></i> Split a Video</a>
+  </div>
+  <div class="row g-3 mb-4">
+    {% for label, value, icon in [('Total jobs', stats.total, 'bi-collection'), ('Completed', stats.completed, 'bi-check-circle'), ('Processing', stats.processing, 'bi-hourglass-split'), ('Clips generated', stats.clips, 'bi-film')] %}
+    <div class="col-6 col-lg-3"><div class="glass-card p-3 text-center"><i class="bi {{ icon }} fs-4 gradient-text"></i><div class="fs-4 fw-bold">{{ value }}</div><div class="small">{{ label }}</div></div></div>
+    {% endfor %}
+  </div>
+  <div class="glass-card p-3">
+    <h2 class="h5 fw-bold">Job history</h2>
+    {% if jobs %}
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead><tr><th>Video</th><th>Duration</th><th>Status</th><th>Clips</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>{{ job.title or job.original_filename }}</td>
+        <td>{{ '%.1f'|format(job.original_duration/60) if job.original_duration else '—' }} min</td>
+        <td><span class="badge status-pill text-bg-{{ 'success' if job.status=='completed' else 'danger' if job.status=='failed' else 'warning' if job.status in ('queued','processing') else 'secondary' }}">{{ job.status }}</span></td>
+        <td>{{ job.clips|length }}</td>
+        <td class="small">{{ job.created_at.strftime('%d %b %Y, %I:%M %p') if job.created_at else '' }}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-light rounded-pill" href="{{ url_for('videos.job_detail', job_id=job.id) }}">Open</a>
+          <form method="post" action="{{ url_for('videos.delete_job', job_id=job.id) }}" class="d-inline" onsubmit="return confirm('Delete this job and all its files?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-danger rounded-pill" aria-label="Delete job"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}
+    <p class="mb-0">No jobs yet. <a href="{{ url_for('videos.workspace') }}">Upload your first video</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

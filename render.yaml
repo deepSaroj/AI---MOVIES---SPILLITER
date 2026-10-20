@@ -1,0 +1,19 @@
+# Render blueprint. NOTE (verified pattern, check current Render docs/pricing):
+# - Free web services spin down when idle and have an EPHEMERAL filesystem:
+#   uploads/outputs are lost on restart. Attach a paid persistent disk or use
+#   object storage (S3) for production file storage.
+# - Free PostgreSQL on Render expires after a limited period; for a lasting
+#   free database use an external provider such as Neon and set DATABASE_URL.
+services:
+  - type: web
+    name: ai-movie-splitter
+    env: python
+    buildCommand: pip install -r requirements.txt && apt-get update && apt-get install -y ffmpeg || true
+    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 300
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: DATABASE_URL
+        sync: false   # paste your Postgres/Neon connection string in the dashboard
